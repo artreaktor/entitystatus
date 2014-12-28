@@ -159,7 +159,7 @@ function entitystatus_views_data_alter(&$data) {
         $data[$info['entity_table']][$status->mashine_name] = array(
           'group' => t('Entity status'),
           'title' => $status->name . ' form',
-          'help' => 'Set/change entitystatus to entity.',
+          'help' => 'Set/change entitystatus on entity.',
           'real field' => $info['entity_field'],
           'field' => array(
             'label' => t('Entity status'),

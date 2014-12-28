@@ -408,7 +408,7 @@ function entitystatus_form_save_submit($form, &$form_state) {
       entity_delete('entitystatus_option', $oid);
     }
   }
-
+  cache_clear_all();
   $form_state['redirect'] = 'admin/structure/entitystatus';
 }
 
@@ -748,4 +748,16 @@ function entitystatus_type_info() {
   }
 
   return $definitions;
+}
+
+
+/**
+ * Implements hook_entity_delete().
+ * Delete all statuses attached to entity
+ */
+function entitystatus_entity_delete($entity, $type) {
+  //list($id, $vid, $bundle) = entity_extract_ids($type, $entity);
+  $info = entity_get_info($type);
+  list($id) = entity_extract_ids($type, $entity);
+  db_delete('entitystatus')->condition('entity_type', $type)->condition('entity_id', $id)->execute();
 }
