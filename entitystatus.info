@@ -1,0 +1,11 @@
+name = Entity status
+description = Create customized status attached to entity.
+core = 7.x
+configure = admin/structure/entitystatus
+
+dependencies[] = entity
+
+; Views
+
+files[] = views/entitystatus_handler_filter_options_list.inc
+files[] = views/entitystatus_handler_field_status_form_rel.inc

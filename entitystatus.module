@@ -1,0 +1,751 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function entitystatus_menu() {
+  $items['admin/structure/entitystatus'] = array(
+    'title' => 'Entity status',
+    'page callback' => 'entitystatus_admin_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer entitystatus'),
+    'description' => 'Configure entity status.',
+    'file' => 'includes/entitystatus.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/structure/entitystatus/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/structure/entitystatus/add'] = array(
+    'title' => 'Add entity status',
+    'page callback' => 'entitystatus_add_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer entitystatus'),
+    'file' => 'includes/entitystatus.admin.inc',
+    'type' => MENU_LOCAL_ACTION,
+    'weight' => 1,
+  );
+
+  $items['admin/structure/entitystatus/add/%'] = array(
+    'title' => 'Add entity status',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('entitystatus_form', NULL, 4),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer entitystatus'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/structure/entitystatus/manage/%/edit'] = array(
+    'title' => 'Edit entity status',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('entitystatus_form', 4, NULL),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer entitystatus'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/structure/entitystatus/manage/%/delete'] = array(
+    'title' => 'Delete entity status',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('entitystatus_delete_confirm', 4),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer entitystatus'),
+    'file' => 'includes/entitystatus.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function entitystatus_entity_info() {
+
+  $info = array();
+
+  $info['entitystatus'] = array(
+    'label' => t('Entity status'),
+    'base table' => 'entitystatus',
+    'entity keys' => array(
+      'id' => 'item_id',
+      'bundle' => 'entity_type',
+    ),
+    'module' => 'entitystatus',
+    'entity class' => 'Entity',
+    'controller class' => 'EntityAPIController',
+    'access arguments' => array('administer entitystatus'),
+  );
+
+  $info['entitystatus_set'] = array(
+    'label' => t('Entity status set'),
+    'base table' => 'entitystatus_set',
+    'entity keys' => array(
+      'id' => 'sid',
+      'bundle' => 'entity_type',
+    ),
+    'module' => 'entitystatus',
+    'entity class' => 'Entity',
+    'controller class' => 'EntityAPIController',
+    'access arguments' => array('administer entitystatus'),
+    'uri callback' => 'entity_class_uri',
+    'admin ui' => array(
+      'path' => 'admin/structure/entitystatus',
+      'controller class' => 'EntityDefaultUIController',
+    ),
+  );
+
+  $info['entitystatus_option'] = array(
+    'label' => t('Entity status option'),
+    'base table' => 'entitystatus_options',
+    'entity keys' => array(
+      'id' => 'oid',
+    ),
+    'module' => 'entitystatus',
+    'entity class' => 'Entity',
+    'controller class' => 'EntityAPIController',
+    'access arguments' => array('administer entitystatus'),
+  );
+
+  return $info;
+}
+
+/**
+ * Form definition for adding / editing status.
+ */
+function entitystatus_entity_form($form, &$form_state) {
+
+  $types = array();
+  foreach (entitystatus_type_info() as $type => $info) {
+    $types[$type] = $info['title'] . '<div class="description">' . $info['description'] . '</div>';
+  }
+
+  $form['entity_type'] = array(
+    '#title' => t('Entity type'),
+    '#type' => 'radios',
+    '#options' => $types,
+    '#default_value' => 'node',
+    '#required' => TRUE,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Continue'),
+    '#weight' => 50,
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler
+ */
+function entitystatus_entity_form_submit($form, &$form_state) {
+  $form_state['redirect'] = 'admin/structure/entitystatus/add/' . $form_state['values']['entity_type'];
+}
+
+function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
+
+  //entity status already exists
+  if (is_numeric($sid)) {
+    $entity = entity_load('entitystatus_set', array($sid));
+    $entity = $entity[$sid];
+    $settings = unserialize($entity->settings);
+
+    $defaults = array(
+      'name' => $entity->name,
+      'mashine_name' => $entity->mashine_name,
+      'bundle_type' => unserialize($entity->bundle_type),
+      'title' => $settings['title'],
+      'empty_opt' => $settings['empty_opt'],
+    );
+    $type = $entity->entity_type;
+    $form_state['storage']['type'] = $entity->entity_type;
+    $form_state['storage']['is_new'] = FALSE;
+    $form_state['storage']['entity'] = $entity;
+    $options = entitystatus_get_options($sid);
+  }
+  //new entity
+  else {
+    $form_state['storage']['type'] = $type;
+    $form_state['storage']['is_new'] = TRUE;
+    $defaults = array(
+      'name' => '',
+      'mashine_name' => '',
+      'bundle_type' => array(),
+      'title' => t('Status'),
+      'empty_opt' => t('Select status'),
+    );
+    //initialize an empty array of options
+    $empty_opt = new stdClass();
+    $empty_opt->oid = '';
+    $empty_opt->opt_name = '';
+    $empty_opt->weight = 1;
+    $options = array(0 => $empty_opt);
+  }
+
+  //use saved options array on the first form load
+  if (!isset($form_state['storage']['options'])) {
+    $form_state['storage']['options'] = $options;
+  }
+  //or play with options in temporary array
+  else  $options = $form_state['storage']['options'];
+
+  //get list of entity bundles
+  $entity_info = entity_get_info($type);
+  $bundles = array();
+  foreach ($entity_info['bundles'] as $key=>$value) {
+    $bundles[$key] = $key;
+  }
+
+  $form_state['storage']['bundles'] = $bundles;
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Entitystatus Set name'),
+    '#descrition' => t('The human-readable name.'),
+    '#default_value' => $defaults['name'],
+  );
+  $form['mashine_name'] = array(
+    '#type' => 'machine_name',
+    '#title' => t('Mashine name'),
+    '#default_value' => $defaults['mashine_name'],
+    '#maxlength' => 20,
+    '#description' => t('It must only contain lowercase letters, numbers and underscores.'),
+    '#machine_name' => array(
+      'exists' => 'entitystatus_mashine_name_exists',
+      'source' => array('name'),
+      'label' => t('Mashine name'),
+      'replace_pattern' => '[^a-z0-9_]+',
+      'replace' => '_',
+    ),
+    // Machine name cannot be changed.
+    '#disabled' => (!empty($defaults['mashine_name'])),
+  );
+
+  $form['bundles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Bundles'),
+    '#descrition' => t('Entity status will be attached to selected bundles.'),
+    '#options' => $bundles,
+    '#default_value' => $defaults['bundle_type'],
+  );
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Entitystatus form title'),
+    '#description' => t('Title that will be shown to user.'),
+    '#default_value' => $defaults['title'],
+  );
+
+  $form['empty_opt'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Empty option label'),
+    '#description' => t('"Empty" label which will be active on every entity without status.'),
+    '#default_value' => $defaults['empty_opt'],
+  );
+
+  $form['options'] = array(
+    '#type' => 'container',
+    '#title' => t('Options'),
+    '#descrition' => t('Add entity status options.'),
+    '#tree' => TRUE,
+    '#prefix' => '<div id="entitystatus-options">',
+    '#suffix' => '</div>',
+    '#theme' => 'entitystatus_options_form',
+  );
+
+  if (!empty($options)) {
+    foreach ($options as $key=>$option) {
+      $form['options'][$key] = array(
+        '#type' => 'fieldset',
+        '#tree' => TRUE,
+        '#prefix' => '<div id="entitystatus-option-item-'.$key.'">',
+        '#suffix' => '</div>',
+      );
+      $form['options'][$key]['oid'] = array(
+        '#type' => 'hidden',
+        '#default_value' => isset($option->oid) ? $option->oid : '',
+      );
+      $form['options'][$key]['opt_name'] = array(
+        '#title' => '',
+        '#type' => 'textfield',
+        '#default_value' => isset($option->opt_name) ? $option->opt_name : '',
+      );
+      $form['options'][$key]['weight'] = array(
+        '#type' => 'weight',
+        '#title' => t('Weight'),
+        '#title_display' => 'invisible',
+        '#default_value' => isset($option->weight) ? $option->weight : '',
+      );
+      $form['options'][$key]['remove'] = array(
+        '#type' => 'submit',
+        '#value' => t('Remove'),
+        '#href' => '',
+        '#index' => $key,
+        '#ajax' => array(
+          'callback' => 'entitystatus_options_ajax_callback',
+          'wrapper' => 'entitystatus-options',
+        ),
+        '#submit' => array('entitystatus_options_remove'),
+      );
+    }
+  }
+
+  $form['options']['add_option'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add an option'),
+    '#href' => '',
+    '#ajax' => array(
+      'callback' => 'entitystatus_options_ajax_callback',
+      'wrapper' => 'entitystatus-options',
+    ),
+    '#submit' => array('entitystatus_options_add'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#validate' => array('entitystatus_form_save_validate'),
+    '#submit' => array('entitystatus_form_save_submit'),
+  );
+
+  return $form;
+}
+
+function entitystatus_options_ajax_callback($form, $form_state) {
+  return $form['options'];
+}
+
+function entitystatus_mashine_name_exists($value) {
+  return db_query_range('SELECT 1 FROM {entitystatus_set} WHERE mashine_name = :name', 0, 1, array(':name' => $value))->fetchField();
+}
+
+function entitystatus_options_add($form, &$form_state) {
+  $empty_opt = new stdClass();
+  $empty_opt->oid = '';
+  $empty_opt->opt_name = '';
+  $empty_opt->weight = 1;
+  $form_state['storage']['options'][] = $empty_opt;
+  $form_state['rebuild'] = TRUE;
+}
+
+function entitystatus_options_remove($form, &$form_state) {
+  $form_state['storage']['options_to_delete'][] = $form_state['storage']['options'][$form_state['triggering_element']['#index']];
+  unset($form_state['storage']['options'][$form_state['triggering_element']['#index']]);
+  $form_state['rebuild'] = TRUE;
+}
+
+
+function entitystatus_form_save_validate($form, &$form_state) {
+  if (empty($form_state['values']['name'])) {
+    form_set_error('name', t("Status name can't be empty!"));
+  }
+}
+
+function entitystatus_form_save_submit($form, &$form_state) {
+
+  $selected_bundles = array();
+  foreach ($form_state['values']['bundles'] as $key=>$val) {
+    if (!$val==0) $selected_bundles[] = $key;
+  }
+
+  if ($form_state['storage']['is_new'] == TRUE) {
+    $ent = array();
+    $ent['name'] = $form_state['values']['name'];
+    $ent['mashine_name'] = $form_state['values']['mashine_name'];
+    $ent['entity_type'] = $form_state['storage']['type'];
+    $ent['bundle_type'] = serialize($selected_bundles);
+    $settings = array(
+      'title' => $form_state['values']['title'],
+      'empty_opt' => $form_state['values']['empty_opt'],
+    );
+    $ent['settings'] = serialize($settings);
+    $entity = entity_create('entitystatus_set', $ent);
+  }
+  else {
+    $entity = $form_state['storage']['entity'];
+    $entity->name = $form_state['values']['name'];
+    $entity->bundle_type = serialize($selected_bundles);
+    $settings = array(
+      'title' => $form_state['values']['title'],
+      'empty_opt' => $form_state['values']['empty_opt'],
+    );
+    $entity->settings = serialize($settings);
+  }
+  $entity->save();
+  $sid = $entity->sid;
+
+  //Saving options
+  if (isset($form_state['input']['options'])) {
+    foreach ($form_state['input']['options'] as $option) {
+
+      if (isset($option['oid'])) {
+        $oid = $option['oid'];
+        if ($oid == '') { // Save new option
+          $ent = array();
+          $ent['sid'] = $sid;
+          $ent['opt_name'] = $option['opt_name'];
+          $ent['weight'] = $option['weight'];
+          $entity = entity_create('entitystatus_option', $ent);
+          $entity->save();
+        }
+        else if (is_numeric($oid)) {  // Update existing
+          $entity = entity_load('entitystatus_option', array($oid));
+          $entity = $entity[$oid];
+          $entity->opt_name = $option['opt_name'];
+          $entity->weight = $option['weight'];
+          $entity->save();
+        }
+      }
+    }
+  }
+  // Delete removed options
+  if (isset($form_state['storage']['options_to_delete'])) {
+    foreach ($form_state['storage']['options_to_delete'] as $option) {
+      $oid = $option->oid;
+      entity_delete('entitystatus_option', $oid);
+    }
+  }
+
+  $form_state['redirect'] = 'admin/structure/entitystatus';
+}
+
+function entitystatus_get_options($sid) {
+
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'entitystatus_option')
+    ->propertyCondition('sid', $sid)
+    ->propertyOrderBy('weight', 'ASC');
+  $result = $query->execute();
+
+  $options = array();
+  if (!empty($result)) {
+    $options = entity_load('entitystatus_option', array_keys($result['entitystatus_option']));
+  }
+
+  return $options;
+}
+
+function entitystatus_get_statuses($entity_type = NULL) {
+  $query = db_select('entitystatus_set', 'ess');
+  $query->fields('ess', array(
+      'sid',
+      'name',
+      'mashine_name',
+      'entity_type',
+      'bundle_type',
+      'settings',
+  ));
+
+  if (!is_null($entity_type)) {
+    $query->condition('ess.entity_type', $entity_type);
+  }
+  $result = $query->execute()->fetchAllAssoc('sid');
+  $entity_type_info = entitystatus_type_info();
+  $statuses = array();
+
+  foreach ($result as $row) {
+
+    $row->admin_path = array();
+    $row->admin_path['edit'] = 'admin/structure/entitystatus/manage/' . $row->sid . '/edit';
+    $row->admin_path['delete'] = 'admin/structure/entitystatus/manage/' . $row->sid . '/delete';
+    $row->bundle_type = unserialize($row->bundle_type);
+    $row->settings = unserialize($row->settings);
+    $row->entity_type_info = $entity_type_info[$row->entity_type];
+
+    $statuses[$row->sid] = $row;
+
+  }
+  return $statuses;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function entitystatus_permission() {
+  $permissions = array(
+    'administer entitystatus' => array(
+      'title' => t('Administer entity status'),
+      'description' => t('Create and edit site-wide entity statuses.'),
+      'restrict access' => TRUE,
+    ),
+  );
+
+  $statuses = entitystatus_get_statuses();
+  foreach ($statuses as $status) {
+    $permissions += array(
+      'use entitystatus ' . $status->name => array(
+        'title' => t('Use "'.$status->name.'" entity status'),
+        'description' => t('Set user status on "'.$status->entity_type.'" entity type.'),
+      ),
+    );
+  }
+
+  return $permissions;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function entitystatus_theme() {
+  return array(
+    'entitystatus_admin_page' => array(
+      'variables' => array(
+        'statuses' => NULL,
+      ),
+      'file' => 'includes/entitystatus.admin.inc',
+    ),
+    'entitystatus_options_form' => array(
+      'arguments' => array ('form' => NULL),
+      'render element' => 'name',
+    ),
+  );
+}
+
+function theme_entitystatus_options_form($element) {
+  $rows = array();
+  foreach (element_children($element['name']) as $child_id) {
+    if (is_numeric($child_id)) {
+
+      $element['name'][$child_id]['weight']['#attributes']['class'] = array('options-order-weight');
+      $rows[] = array(
+          'data' => array(
+              array('class' => array('option-item')),
+                  drupal_render($element['name'][$child_id]['opt_name']) . drupal_render($element['name'][$child_id]['oid']),
+                  drupal_render($element['name'][$child_id]['weight']),
+                  drupal_render($element['name'][$child_id]['remove']),
+              ),
+          'class' => array('draggable', 'entitystatus-option'),
+          'id' => array('entitystatus-option-'.$child_id),
+      );
+    }
+  }
+
+  $header = array('',t('option'),t('position'),'');
+  $output = '';
+  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'options-order')));
+  $output .= drupal_render($element['name']['add_option']);
+  drupal_add_tabledrag('options-order', 'order', 'sibling', 'options-order-weight');
+
+  return $output;
+}
+
+/**
+* Implements hook_field_extra_fields().
+*/
+function entitystatus_field_extra_fields() {
+
+  $statuses = entitystatus_get_statuses();
+  $extra = array();
+
+  foreach ($statuses as $status) {
+    foreach ($status->bundle_type as $bundle) {
+
+      $extra[$status->entity_type][$bundle] = array(
+        'display' => array(
+          'entitystatus_'.$status->sid => array(
+            'label' => t($status->name),
+            'description' => t('Per-user entity status.'),
+            'weight' => 50,
+          ),
+        ),
+      );
+    }
+  }
+
+  return $extra;
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function entitystatus_entity_view($entity, $type, $view_mode, $langcode) {
+  $statuses = entitystatus_get_statuses();
+
+  foreach ($statuses as $status_set) {
+    if ($type == $status_set->entity_type && in_array($entity->content['#bundle'], $status_set->bundle_type)) {
+      if (user_access('use entitystatus ' . $status_set->name)) {
+        $form_title = $status_set->settings['title'];
+        $form = drupal_get_form('entitystatus_ui_form', $status_set, $entity, $form_title);
+        $form_output = drupal_render($form);
+        $entity->content['entitystatus_' . $status_set->name] = array(
+          '#markup' => $form_output,
+        );
+      }
+    }
+  }
+}
+
+function entitystatus_ui_form($form, &$form_state, $status_set, $entity, $form_title = NULL, $entitystatus = NULL) {
+  //dsm($entity);
+  if (!isset($entity->content['#entity_id'])) {
+    $entity_info = entity_get_info($entity->content['#entity_type']);
+    $entity_id_field = $entity_info['entity keys']['id'];
+    $entity_id = $entity->$entity_id_field;
+    $entity->content['#entity_id'] = $entity_id;
+  }
+  else {
+    $entity_id = $entity->content['#entity_id'];
+  }
+
+  $form_state['storage']['entity'] = $entity;
+  $form_state['storage']['sid'] = $status_set->sid;
+
+
+  if (is_null($entitystatus)) {
+    global $user;
+    // Check if current user already set status for current entity
+    $entitystatus = entitystatus_get_user_entitystatus($status_set->sid, $user->uid, $entity->content['#entity_type'], NULL, $entity_id);
+    $entitystatus = array_shift($entitystatus);
+  }
+
+  if (empty($entitystatus)) {
+    $form_state['storage']['entitystatus_op'] = 'create';
+    $option_default = '';
+  }
+  else {
+    $form_state['storage']['entitystatus_op'] = 'update';
+    $form_state['storage']['entitystatus'] = $entitystatus;
+    $option_default = $entitystatus->oid;
+  }
+
+  $options = entitystatus_get_options($status_set->sid);
+  $opt_list = array('' => t($status_set->settings['empty_opt']));
+
+  foreach ($options as $option) {
+    $opt_list[$option->oid] = $option->opt_name;
+  }
+
+  $form = array();
+
+  $form['entitystatus_'.$status_set->sid] = array(
+    '#type' => 'select',
+    '#title' => t($form_title),
+    '#options' => $opt_list,
+    '#default_value' => $option_default,
+    '#ajax' => array(
+       'callback' => 'entitystatus_ui_form_change_callback',
+       'effect' => 'fade',
+       'wrapper' => 'entitystatus-ui-form',
+       'event' => 'change',
+       'progress' => array('message' => '', 'type' => 'throbber'),
+     ),
+  );
+
+  return $form;
+}
+
+function entitystatus_ui_form_change_callback($form, &$form_state) {
+
+  global $user;
+  $entity = $form_state['storage']['entity'];
+  $sid = $form_state['storage']['sid'];
+  $op =  $form_state['storage']['entitystatus_op'];
+
+  switch ($op) {
+    case 'create':
+      //Set new status for current entity
+      $ent = array();
+      $ent['sid'] = $sid;
+      $ent['entity_type'] = $entity->content['#entity_type'];
+      $ent['bundle_type'] = $entity->content['#bundle'];
+      $ent['entity_id'] = $entity->content['#entity_id'];
+      $ent['uid'] = $user->uid;
+      $ent['oid'] = $form_state['values']['entitystatus_'.$sid];
+      $ent['timestamp'] = time();
+      $entitystatus = entity_create('entitystatus', $ent);
+      $entitystatus->save();
+    break;
+    case 'update':
+      $entitystatus = $form_state['storage']['entitystatus'];
+      $entitystatus->oid = $form_state['values']['entitystatus_'.$sid];
+      $entitystatus->timestamp = time();
+      $entitystatus->save();
+    break;
+  }
+
+  if ($form_state['values']['entitystatus_'.$sid] == '') {
+    $entitystatus = $form_state['storage']['entitystatus'];
+    entity_delete('entitystatus', $entitystatus->item_id);
+  }
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function entitystatus_views_api() {
+  return array(
+    'api' => 3.0,
+    'path' => drupal_get_path('module', 'entitystatus') . '/views',
+  );
+}
+
+/**
+ * Get all user-defined statuses
+ *
+ * @param $sid
+ *   Status set ID
+ * @param $uid
+ *   User ID
+ * @param $type
+ *   Entity type eg "node" or "user"
+ * @param $bundle
+ *   Entity subtype eg "article"
+ * @param $ids
+ *   An associative array of entity ids
+ */
+function entitystatus_get_user_entitystatus($sid, $uid = NULL, $type = NULL, $bundle = NULL, $ids = NULL) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'entitystatus');
+  $query->propertyCondition('sid', $sid);
+  if (!is_null($uid)) {
+    $query->propertyCondition('uid', $uid);
+  }
+  if (!is_null($type)) {
+    $query->propertyCondition('entity_type', $type);
+    if (!is_null($bundle)) {
+      $query->propertyCondition('bundle_type', $bundle);
+    }
+    if (!is_null($ids)) {
+      $query->propertyCondition('entity_id', $ids);
+    }
+  }
+  $result = $query->execute();
+
+  $user_statuses = array();
+  if (!empty($result)) {
+    $user_statuses = entity_load('entitystatus', array_keys($result['entitystatus']));
+  }
+  return $user_statuses;
+}
+
+function entitystatus_type_info() {
+
+  $definitions = array();
+
+  foreach (entity_get_info() as $entity_name=>$entity_type) {
+    if ($entity_type['fieldable'] == TRUE) {
+
+      if ($entity_name == 'user') {
+        continue;
+        $entity_type['entity keys']['label'] = 'name';
+      }
+
+      $label = (isset($entity_type['entity keys']['label']) ? $entity_type['entity keys']['label'] : '');
+      $descr = (isset($entity_type['description']) ? $entity_type['description'] : '');
+
+      $definitions[$entity_name] = array(
+        'title' => t($entity_type['label']),
+        'description' => t($descr),
+        'entity_table' => $entity_type['base table'],
+        'entity_field' => $entity_type['entity keys']['id'],
+        'label_field' => $label,
+      );
+
+    }
+  }
+
+  return $definitions;
+}

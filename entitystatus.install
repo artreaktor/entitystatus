@@ -1,0 +1,190 @@
+<?php
+
+/**
+* Implements hook_install().
+*/
+function entitystatus_install() {
+
+}
+
+/**
+* Implements hook_uninstall().
+*/
+function entitystatus_uninstall() {
+  drupal_uninstall_schema('entitystatus');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function entitystatus_schema() {
+  $schema = array();
+
+  $schema['entitystatus_set'] = array(
+    'description' => 'Status sets.',
+    'fields' => array(
+      'sid' => array(
+        'description' => 'The unique set ID.',
+        'type' => 'serial',
+        'size' => 'small',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The human-readable name.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'mashine_name' => array(
+        'description' => 'The mashine name.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'entity_type' => array(
+        'description' => 'Entity type, such as one of "node", "comment", or "user".',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'bundle_type' => array(
+        'description' => 'Bundle type.',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'settings' => array(
+        'description' => 'Settings.',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('sid'),
+  );
+
+  $schema['entitystatus'] = array(
+    'description' => 'Entities statuses.',
+    'fields' => array(
+      'item_id' => array(
+        'description' => 'The unique item ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'sid' => array(
+        'description' => 'The status set ID.',
+        'type' => 'int',
+        'size' => 'small',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_type' => array(
+        'description' => 'Entity type, eg "node", "comment", "user".',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'bundle_type' => array(
+        'description' => 'Bundle type, eg "page" or "article".',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'entity_id' => array(
+        'description' => 'The unique entity ID, such as either the {cid}, {uid}, or {nid}.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'uid' => array(
+        'description' => 'The user ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'oid' => array(
+        'description' => 'Status option ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'timestamp' => array(
+        'description' => 'The UNIX time stamp.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-size' => 11,
+      ),
+    ),
+    'primary key' => array('item_id'),
+    'unique keys' => array(
+      'sid_entity_id_uid_oid' => array('sid', 'entity_id', 'uid', 'oid'),
+    ),
+    'indexes' => array(
+      'entity_type_uid_oid' => array('entity_type', 'uid', 'oid'),
+      'entity_type_entity_id_uid_oid' => array(
+        'entity_type',
+        'entity_id',
+        'uid',
+        'oid',
+      ),
+      'entity_id_sid_oid' => array('entity_id', 'sid', 'oid'),
+    ),
+  );
+
+  $schema['entitystatus_options'] = array(
+    'description' => 'Options for statuses.',
+    'fields' => array(
+      'oid' => array(
+        'description' => 'The unqiue option ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'sid' => array(
+        'description' => 'The unqiue status set ID.',
+        'type' => 'int',
+        'size' => 'small',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'opt_name' => array(
+        'description' => 'The option name.',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'weight' => array(
+        'description' => 'The option weight.',
+        'type' => 'int',
+        'size' => 'small',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('oid'),
+    'indexes' => array(
+      'oid_sid' => array('oid', 'sid'),
+    ),
+  );
+
+  return $schema;
+}
+
