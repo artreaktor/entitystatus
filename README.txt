@@ -1,4 +1,4 @@
-Entitystatus
+ Entitystatus  
 
 Stores per-user per-entity statuses.
 Entitystatus module provides functionality similar to Flag, but not limit you
