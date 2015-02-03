@@ -1,0 +1,26 @@
+Entitystatus
+
+Stores per-user per-entity statuses.
+Entitystatus module provides functionality similar to Flag, but not limit you
+with number of options.
+
+Entitystatus can be attached to any fieldable entity.
+
+BASIC SETUP
+To add Entitystatus to arbitrary entity you need:
+1. Create new Entitystatus and it's options in admin/structure/entitystatus
+2. Set user permissions in admin/people/permissions
+   Every single Entitystatus has it's own permission.
+3. Set fields order in your entity "Manage display" page
+
+VIEWS
+You need to add few relationships (under "Entity status" group) to use
+Entitystatus field in full:
+1. Basic relationsip named with your custom Entitystatus name.
+After adding basic relationship you will be able to add subsequent relations:
+- Entitystatus User
+- Entitystatus Option
+- Entitystatus Set
+2. All Entitystatus fields, filters and sort handlers will be available now
+   under "Entity status" group.
+3. your-entity-status-name form is also available among the fields.
