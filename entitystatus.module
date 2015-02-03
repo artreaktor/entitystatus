@@ -182,7 +182,7 @@ function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
     $defaults = array(
       'name' => $entity->name,
       'mashine_name' => $entity->mashine_name,
-      'bundle_type' => unserialize($entity->bundle_type),                                       
+      'bundle_type' => unserialize($entity->bundle_type),
       'title' => $settings['title'],
       'empty_opt' => $settings['empty_opt'],
     );
@@ -280,8 +280,6 @@ function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
     '#prefix' => '<div id="entitystatus-options">',
     '#suffix' => '</div>',
     '#theme' => 'entitystatus_options_form',
-  );
-  );
   );
 
   if (!empty($options)) {
