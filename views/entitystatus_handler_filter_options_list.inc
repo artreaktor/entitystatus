@@ -32,7 +32,6 @@ class entitystatus_views_handler_filter_options_list extends views_handler_filte
 
   function operators() {
     $operators = parent::operators();
-    //unset($operators['empty'], $operators['not empty']);
     return $operators;
   }
 
@@ -81,7 +80,7 @@ class entitystatus_views_handler_filter_options_list extends views_handler_filte
       $identifier = $this->options['expose']['identifier'];
 
       if (empty($this->options['expose']['use_operator']) || empty($this->options['expose']['operator_id'])) {
-        // exposed and locked.
+        // Exposed and locked.
         $which = in_array($this->operator, $this->operator_values(1)) ? 'value' : 'none';
       }
       else {
@@ -126,7 +125,8 @@ class entitystatus_views_handler_filter_options_list extends views_handler_filte
       }
 
       if ($which == 'all') {
-        if (empty($form_state['exposed']) && (in_array($this->value_form_type, array('checkbox', 'checkboxes', 'radios', 'select')))) {
+        $form_elements = array('checkbox', 'checkboxes', 'radios', 'select');
+        if (empty($form_state['exposed']) && (in_array($this->value_form_type, $form_elements))) {
           $form['value']['#prefix'] = '<div id="edit-options-value-wrapper">';
           $form['value']['#suffix'] = '</div>';
         }
@@ -137,7 +137,7 @@ class entitystatus_views_handler_filter_options_list extends views_handler_filte
 
   function value_validate($form, &$form_state) {}
 
-  function value_submit($form, &$form_state) { }
+  function value_submit($form, &$form_state) {}
 
   function query() {
 
@@ -154,27 +154,30 @@ class entitystatus_views_handler_filter_options_list extends views_handler_filte
     switch ($this->operator) {
       case 'empty':
         $this->query->add_where($this->options['group'], "$this->table_alias.oid", '', 'IS NULL');
-      break;
+        break;
+
       case 'not empty':
         $this->query->add_where($this->options['group'], "$this->table_alias.oid", '', 'IS NOT NULL');
-      break;
+        break;
+
       case 'not in':
         if (!empty($value)) {
           $this->query->add_where(
             $this->options['group'],
             db_or()
-              // User statuses
-              ->condition( db_and()
+              // User statuses.
+              ->condition(db_and()
                   ->condition("$this->table_alias.oid", $value, $this->operator)
               )
-              ->condition( db_and()
+              ->condition(db_and()
                   ->condition("$this->table_alias.oid", '', 'IS NULL')
               )
           );
         }
-      break;
+        break;
+
       default:
-        // Don't filter if nothing selected
+        // Don't filter if nothing selected.
         if (!empty($value)) {
           $operator = $this->operator;
           $condition = db_or()->condition("$this->table_alias.oid", $value, $this->operator);

@@ -173,7 +173,7 @@ function entitystatus_entity_form_submit($form, &$form_state) {
 
 function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
 
-  //entity status already exists
+  // Entity status already exists.
   if (is_numeric($sid)) {
     $entity = entity_load('entitystatus_set', array($sid));
     $entity = $entity[$sid];
@@ -192,7 +192,7 @@ function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
     $form_state['storage']['entity'] = $entity;
     $options = entitystatus_get_options($sid);
   }
-  //new entity
+  // New entity.
   else {
     $form_state['storage']['type'] = $type;
     $form_state['storage']['is_new'] = TRUE;
@@ -203,7 +203,7 @@ function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
       'title' => t('Status'),
       'empty_opt' => t('Select status'),
     );
-    //initialize an empty array of options
+    // Initialize an empty array of options.
     $empty_opt = new stdClass();
     $empty_opt->oid = '';
     $empty_opt->opt_name = '';
@@ -211,17 +211,19 @@ function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
     $options = array(0 => $empty_opt);
   }
 
-  //use saved options array on the first form load
+  // Use saved options array on the first form load.
   if (!isset($form_state['storage']['options'])) {
     $form_state['storage']['options'] = $options;
   }
-  //or play with options in temporary array
-  else  $options = $form_state['storage']['options'];
+  // Or play with options in temporary array.
+  else {
+    $options = $form_state['storage']['options'];
+  }
 
-  //get list of entity bundles
+  // Get list of entity bundles.
   $entity_info = entity_get_info($type);
   $bundles = array();
-  foreach ($entity_info['bundles'] as $key=>$value) {
+  foreach ($entity_info['bundles'] as $key => $value) {
     $bundles[$key] = $key;
   }
 
@@ -283,11 +285,11 @@ function entitystatus_form($form, &$form_state, $sid = NULL, $type) {
   );
 
   if (!empty($options)) {
-    foreach ($options as $key=>$option) {
+    foreach ($options as $key => $option) {
       $form['options'][$key] = array(
         '#type' => 'fieldset',
         '#tree' => TRUE,
-        '#prefix' => '<div id="entitystatus-option-item-'.$key.'">',
+        '#prefix' => '<div id="entitystatus-option-item-' . $key . '">',
         '#suffix' => '</div>',
       );
       $form['options'][$key]['oid'] = array(
@@ -372,8 +374,10 @@ function entitystatus_form_save_validate($form, &$form_state) {
 function entitystatus_form_save_submit($form, &$form_state) {
 
   $selected_bundles = array();
-  foreach ($form_state['values']['bundles'] as $key=>$val) {
-    if (!$val==0) $selected_bundles[] = $key;
+  foreach ($form_state['values']['bundles'] as $key => $val) {
+    if (!$val == 0) {
+      $selected_bundles[] = $key;
+    }
   }
 
   if ($form_state['storage']['is_new'] == TRUE) {
@@ -402,7 +406,7 @@ function entitystatus_form_save_submit($form, &$form_state) {
   $entity->save();
   $sid = $entity->sid;
 
-  //Saving options
+  // Saving options.
   if (isset($form_state['input']['options'])) {
     foreach ($form_state['input']['options'] as $option) {
 
@@ -416,7 +420,8 @@ function entitystatus_form_save_submit($form, &$form_state) {
           $entity = entity_create('entitystatus_option', $ent);
           $entity->save();
         }
-        else if (is_numeric($oid)) {  // Update existing
+        // Update existing
+        elseif (is_numeric($oid)) {
           $entity = entity_load('entitystatus_option', array($oid));
           $entity = $entity[$oid];
           $entity->opt_name = $option['opt_name'];
@@ -502,8 +507,8 @@ function entitystatus_permission() {
   foreach ($statuses as $status) {
     $permissions += array(
       'use entitystatus ' . $status->name => array(
-        'title' => t('Use "'.$status->name.'" entity status'),
-        'description' => t('Set user status on "'.$status->entity_type.'" entity type.'),
+        'title' => t('Use @status_name entity status', array('@status_name' => $status->name)),
+        'description' => t('Set user status on "@entity_type" entity type.', array('@entity_type' => $status->entity_type)),
       ),
     );
   }
@@ -536,21 +541,28 @@ function theme_entitystatus_options_form($element) {
 
       $element['name'][$child_id]['weight']['#attributes']['class'] = array('options-order-weight');
       $rows[] = array(
-          'data' => array(
-              array('class' => array('option-item')),
-                  drupal_render($element['name'][$child_id]['opt_name']) . drupal_render($element['name'][$child_id]['oid']),
-                  drupal_render($element['name'][$child_id]['weight']),
-                  drupal_render($element['name'][$child_id]['remove']),
-              ),
-          'class' => array('draggable', 'entitystatus-option'),
-          'id' => array('entitystatus-option-'.$child_id),
+        'data' => array(
+          array('class' => array('option-item')),
+            drupal_render($element['name'][$child_id]['opt_name']) . drupal_render($element['name'][$child_id]['oid']),
+            drupal_render($element['name'][$child_id]['weight']),
+            drupal_render($element['name'][$child_id]['remove']),
+          ),
+        'class' => array('draggable', 'entitystatus-option'),
+        'id' => array('entitystatus-option-' . $child_id),
       );
     }
   }
 
   $header = array('',t('option'),t('position'),'');
   $output = '';
-  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'options-order')));
+  $table_array = array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array(
+      'id' => 'options-order,
+    '),
+  );
+  $output .= theme('table', $table_array);
   $output .= drupal_render($element['name']['add_option']);
   drupal_add_tabledrag('options-order', 'order', 'sibling', 'options-order-weight');
 
@@ -558,8 +570,8 @@ function theme_entitystatus_options_form($element) {
 }
 
 /**
-* Implements hook_field_extra_fields().
-*/
+ * Implements hook_field_extra_fields().
+ */
 function entitystatus_field_extra_fields() {
 
   $statuses = entitystatus_get_statuses();
@@ -604,7 +616,6 @@ function entitystatus_entity_view($entity, $type, $view_mode, $langcode) {
 }
 
 function entitystatus_ui_form($form, &$form_state, $status_set, $entity, $form_title = NULL, $entitystatus = NULL) {
-  //dsm($entity);
   if (!isset($entity->content['#entity_id'])) {
     $entity_info = entity_get_info($entity->content['#entity_type']);
     $entity_id_field = $entity_info['entity keys']['id'];
@@ -617,7 +628,6 @@ function entitystatus_ui_form($form, &$form_state, $status_set, $entity, $form_t
 
   $form_state['storage']['entity'] = $entity;
   $form_state['storage']['sid'] = $status_set->sid;
-
 
   if (is_null($entitystatus)) {
     global $user;
@@ -645,7 +655,7 @@ function entitystatus_ui_form($form, &$form_state, $status_set, $entity, $form_t
 
   $form = array();
 
-  $form['entitystatus_'.$status_set->sid] = array(
+  $form['entitystatus_' . $status_set->sid] = array(
     '#type' => 'select',
     '#title' => t($form_title),
     '#options' => $opt_list,
@@ -667,31 +677,32 @@ function entitystatus_ui_form_change_callback($form, &$form_state) {
   global $user;
   $entity = $form_state['storage']['entity'];
   $sid = $form_state['storage']['sid'];
-  $op =  $form_state['storage']['entitystatus_op'];
+  $op = $form_state['storage']['entitystatus_op'];
 
   switch ($op) {
     case 'create':
-      //Set new status for current entity
+      // Set new status for current entity
       $ent = array();
       $ent['sid'] = $sid;
       $ent['entity_type'] = $entity->content['#entity_type'];
       $ent['bundle_type'] = $entity->content['#bundle'];
       $ent['entity_id'] = $entity->content['#entity_id'];
       $ent['uid'] = $user->uid;
-      $ent['oid'] = $form_state['values']['entitystatus_'.$sid];
+      $ent['oid'] = $form_state['values']['entitystatus_' . $sid];
       $ent['timestamp'] = time();
       $entitystatus = entity_create('entitystatus', $ent);
       $entitystatus->save();
-    break;
+      break;
+
     case 'update':
       $entitystatus = $form_state['storage']['entitystatus'];
-      $entitystatus->oid = $form_state['values']['entitystatus_'.$sid];
+      $entitystatus->oid = $form_state['values']['entitystatus_' . $sid];
       $entitystatus->timestamp = time();
       $entitystatus->save();
-    break;
+      break;
   }
 
-  if ($form_state['values']['entitystatus_'.$sid] == '') {
+  if ($form_state['values']['entitystatus_' . $sid] == '') {
     $entitystatus = $form_state['storage']['entitystatus'];
     entity_delete('entitystatus', $entitystatus->item_id);
   }
@@ -750,12 +761,13 @@ function entitystatus_type_info() {
 
   $definitions = array();
 
-  foreach (entity_get_info() as $entity_name=>$entity_type) {
+  foreach (entity_get_info() as $entity_name => $entity_type) {
     if ($entity_type['fieldable'] == TRUE) {
 
       if ($entity_name == 'user') {
+        // TODO: Get User entity to work
         continue;
-        $entity_type['entity keys']['label'] = 'name';
+        //$entity_type['entity keys']['label'] = 'name';
       }
 
       $label = (isset($entity_type['entity keys']['label']) ? $entity_type['entity keys']['label'] : '');
@@ -768,7 +780,6 @@ function entitystatus_type_info() {
         'entity_field' => $entity_type['entity keys']['id'],
         'label_field' => $label,
       );
-
     }
   }
 
@@ -782,7 +793,7 @@ function entitystatus_type_info() {
  */
 function entitystatus_entity_delete($entity, $type) {
   //list($id, $vid, $bundle) = entity_extract_ids($type, $entity);
-  $info = entity_get_info($type);
+  //$info = entity_get_info($type);
   list($id) = entity_extract_ids($type, $entity);
   db_delete('entitystatus')->condition('entity_type', $type)->condition('entity_id', $id)->execute();
 }

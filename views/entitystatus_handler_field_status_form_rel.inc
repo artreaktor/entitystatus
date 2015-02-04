@@ -20,50 +20,45 @@ class entitystatus_handler_field_status_form_rel extends views_handler_field {
   }
 
 
-    function query() {
+  function query() {
 
-      //$this->table = node; - entity table
-      //$this->field = bushstatus; - status mashine name
-      //$this->definition['entity type'] = 'node'; - entity type name
-      //$this->definition['real field'] = 'nid'; - entity field
+    // $this->table = node; - entity table
+    // $this->field = bushstatus; - status mashine name
+    // $this->definition['entity type'] = 'node'; - entity type name
+    // $this->definition['real field'] = 'nid'; - entity field
+    // ????????
+    // $this->table_alias = 'entitystatus';
+    // $this->field_alias = 'entity_id';
+    $this->ensure_my_table();
+    $join = new views_join();
+    $join->table = 'entitystatus';
+    $join->left_table = $this->view->base_table;
+    $join->left_field = $this->view->base_field;
+    $join->field = 'entity_id';
+    $join->type = 'LEFT';
 
-      //????????
-      //$this->table_alias = 'entitystatus';
-      //$this->field_alias = 'entity_id';
+    $this->query->add_relationship($join->table, $join, $join->left_table);
+    $this->query->add_field($join->table, 'item_id', 'es_id');
+    //$this->query->add_field($join->table, 'sid', 'es_sid');
 
-      $this->ensure_my_table();
+    global $user;
 
-      $join = new views_join();
+    // User statuses.
+    $this->query->add_where(
+      0,
+      db_or()
+        // User statuses.
+        ->condition(db_and()
+          ->condition('entitystatus.uid', $user->uid, '=')
+          ->condition('entitystatus.entity_type', $this->definition['entity type'], '=')
+        )
+        // Entities without status.
+        ->condition(db_and()
+          ->condition('entitystatus.entity_type', '', 'IS NULL')
+        )
+    );
 
-      $join->table = 'entitystatus';
-      $join->left_table = $this->view->base_table;
-      $join->left_field = $this->view->base_field;
-      $join->field = 'entity_id';
-      $join->type = 'LEFT';
-
-      $this->query->add_relationship($join->table, $join, $join->left_table);
-      $this->query->add_field($join->table, 'item_id', 'es_id');
-      //$this->query->add_field($join->table, 'sid', 'es_sid');
-
-      global $user;
-
-      // User statuses
-      $this->query->add_where(
-        0,
-        db_or()
-          // User statuses
-          ->condition( db_and()
-              ->condition('entitystatus.uid', $user->uid, '=')
-              ->condition('entitystatus.entity_type', $this->definition['entity type'], '=')
-          )
-          // Entities without status
-          ->condition( db_and()
-              ->condition('entitystatus.entity_type', '', 'IS NULL')
-          )
-      );
-
-    }
-
+  }
 
   function render($values) {
 
@@ -87,4 +82,5 @@ class entitystatus_handler_field_status_form_rel extends views_handler_field {
     }
 
   }
+
 }

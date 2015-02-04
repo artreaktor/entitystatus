@@ -21,7 +21,6 @@ function entitystatus_views_data() {
     ),
   );
 
-
   $data['entitystatus']['sid'] = array(
     'title' => t('Entitystatus Set'),
     'help' => t('Entitystatus Set that attached to particular entity.'),
@@ -143,7 +142,7 @@ function entitystatus_views_data() {
 function entitystatus_views_data_alter(&$data) {
 
   $statuses = entitystatus_get_statuses();
-  // Loop through defined statuses and add views configuration
+  // Loop through defined statuses and add views configuration.
   foreach ($statuses as $status) {
 
     if (!isset($status->entity_type_info)) {
@@ -173,7 +172,7 @@ function entitystatus_views_data_alter(&$data) {
           ),
         );
 
-        $data[$info['entity_table']][$status->mashine_name.'_rel'] = array(
+        $data[$info['entity_table']][$status->mashine_name . '_rel'] = array(
           'group' => t('Entity status'),
           'title' => $status->name . ' relation',
           'help' => 'Add Entitystatus relationship.',
@@ -189,7 +188,7 @@ function entitystatus_views_data_alter(&$data) {
         );
       }
 
-      // Add a relationship for the user
+      // Add a relationship for the user.
       $data['users']['entitystatus'] = array(
         'group' => t('Entity status'),
         'title' => t("User's entitystatuses"),
